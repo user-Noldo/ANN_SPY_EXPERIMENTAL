@@ -1,30 +1,32 @@
 //@version=4
 
-MIT License
+//MIT License
 
-Copyright (c) 2019 user-Noldo
+//Copyright (c) 2019 user-Noldo
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+//Permission is hereby granted, free of charge, to any person obtaining a copy
+//of this software and associated documentation files (the "Software"), to deal
+//in the Software without restriction, including without limitation the rights
+//to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//copies of the Software, and to permit persons to whom the Software is
+//furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+//The above copyright notice and this permission notice shall be included in all
+//copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//SOFTWARE.
 
 
 study("ANN MACD Future Forecast (SPY 1D) ", max_bars_back=21)
 src = close[0]
+
+lights          = input(title="Barcolor I / 0 ? ", options=["ON", "OFF"], defval="OFF")
 
 
 // Essential Functions
@@ -110,10 +112,10 @@ basis  = e_r                         // Midband
 
 // Function : Squeeze Momentum Indicator (SQZMOM_LB) (LazyBear)
 
-length = input(20, title="BB Length")
-mult = input(2.0,title="BB MultFactor")
-lengthKC=input(20, title="KC Length")
-multKC = input(1.5, title="KC MultFactor")
+length = 20
+mult = 2.0
+lengthKC=20
+multKC = 1.5
 
 // Calculate BB
 
@@ -202,36 +204,43 @@ hist = macd - signal
 
 // Conditions : 
 
-_positive_condition = hist < 0 
-_negative_condition = hist > 0
+positive_condition = hist < 0 
+negative_condition = hist > 0
 
-
-// Plotage 
-
-col_grow_above =  #EF5350
-col_grow_below =  #B2DFDB
-col_fall_above =  #FFCDD2
-col_fall_below =  #26A69A
-col_macd = #0094ff
-col_signal = #ff6a00
-
+col_hist() => positive_condition ? color.new(#F5FFFA,0) : negative_condition ? color.new(#FF355E,0) : color.new(color.yellow,0)
+col_histo = col_hist()
 
 //Plot data
 
-plot(hist  , title="Histogram", style=plot.style_columns, color=(hist>=0 ? (hist[1] < hist ? col_grow_above : col_fall_above) : (hist[1] < hist ? col_grow_below : col_fall_below) ), transp=0 )
-plot(macd  , title="Diff", color=col_macd, transp=0)
-plot(signal, title="Catalyzer", color=col_signal, transp=0)
-hline(0, color= color.green, linewidth=1)
+hline(0, color=#FFB300, linewidth = 2)
+
+plot(hist, color=(positive_condition ? #00A86B : #D40000), style=plot.style_columns,linewidth= 5 , title="Area", transp=30)
+plot(hist, color=col_histo,style =plot.style_cross, title="Forecast", linewidth=3)
+
 
 
 // Definition : Barcolor 
 
+_lights = 0.00 
+
+
+if (lights=="ON")
+
+    _lights:= 1.00
+    
+if (lights=="OFF")
+
+    _lights:= -1.00   
+
+
+bcolor_on  = _lights ==  1.00
+bcolor_off = _lights == -1.00
+
 
 color_condition() => 
 
-    (_positive_condition) ?  color.green  : (_negative_condition)  ?  color.red : na 
+    (positive_condition and _lights == 1.00) ?  color.green  : (negative_condition and _lights == 1.00)  ?  color.red : na 
    
-  
   
 color barColor = na 
 barColor := color_condition()
