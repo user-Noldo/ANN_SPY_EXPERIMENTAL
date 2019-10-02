@@ -1,0 +1,215 @@
+//@version=4
+study("ANN MACD Future Forecast (SPY 1D) ")
+src = close[0]
+
+
+// Essential Functions
+
+// Highest - Lowest Functions ( All efforts goes to RicardoSantos )
+
+f_highest(_src, _length)=>
+    _adjusted_length = _length < 1 ? 1 : _length
+    _value = _src
+    for _i = 0 to (_adjusted_length-1)
+        _value := _src[_i] >= _value ? _src[_i] : _value
+    _return = _value
+
+f_lowest(_src, _length)=>
+    _adjusted_length = _length < 1 ? 1 : _length
+    _value = _src
+    for _i = 0 to (_adjusted_length-1)
+        _value := _src[_i] <= _value ? _src[_i] : _value
+    _return = _value
+
+// Function Sum  
+
+f_sum(_src , _length) => 
+
+    _output  = 0.00 
+    
+    _length_adjusted = _length < 1 ? 1 : _length
+    
+    for i = 0 to _length_adjusted-1
+        _output := _output + _src[i]
+
+
+// Unlocked Exponential Moving Average Function
+
+f_ema(_src, _length)=>
+    _length_adjusted = _length < 1 ? 1 : _length
+    _multiplier = 2 / (_length_adjusted + 1)
+    _return  = 0.00
+    _return := na(_return[1]) ? _src : ((_src - _return[1]) * _multiplier) + _return[1]
+
+
+// Unlocked Moving Average Function 
+
+f_sma(_src, _length)=>
+    
+    _output = 0.00
+    _length_adjusted = _length < 0 ? 0 : _length
+    w = cum(_src)
+
+    _output:= (w - w[_length_adjusted]) / _length_adjusted
+   
+    _output    
+
+
+// Definition : Function Bollinger Bands
+
+Multiplier = 2 
+_length_bb = 20
+
+
+e_r = f_sma(src,_length_bb)
+
+
+// Function Standard Deviation : 
+
+f_stdev(_src,_length) =>
+
+    float _output = na 
+    _length_adjusted = _length < 2 ? 2 : _length
+    _avg  = f_ema(_src , _length_adjusted)
+    evar  = (_src - _avg) * (_src - _avg)
+    evar2 = ((f_sum(evar,_length_adjusted))/_length_adjusted)
+    
+    _output := sqrt(evar2)
+
+
+std_r = f_stdev(src , _length_bb )
+
+
+upband = e_r + (Multiplier * std_r)  // Upband
+dnband = e_r - (Multiplier * std_r)  // Lowband
+basis  = e_r                         // Midband
+
+// Function : Squeeze Momentum Indicator (SQZMOM_LB) (LazyBear)
+
+length = input(20, title="BB Length")
+mult = input(2.0,title="BB MultFactor")
+lengthKC=input(20, title="KC Length")
+multKC = input(1.5, title="KC MultFactor")
+
+// Calculate BB
+
+dev = multKC * f_stdev(src, length)
+upperBB = e_r + dev
+lowerBB = e_r - dev
+
+// Calculate KC
+
+ma = f_sma(src, lengthKC)
+range = tr
+rangema = f_sma(range, lengthKC)
+upperKC = ma + rangema * multKC
+lowerKC = ma - rangema * multKC
+
+sqzOn  = (lowerBB > lowerKC) and (upperBB < upperKC)
+sqzOff = (lowerBB < lowerKC) and (upperBB > upperKC)
+noSqz  = (sqzOn == false) and (sqzOff == false)
+
+val = linreg(src -  f_sma(f_sma(f_highest(f_highest(src,1), lengthKC), f_lowest(f_lowest(src,1), lengthKC)),f_sma(src,lengthKC)), lengthKC,0)
+
+
+// Inputs on Tangent Function : 
+
+tangentdiff(_src) => nz((_src - _src[1]) / _src[1] ) 
+
+
+// Deep Learning Activation Function (Tanh) : 
+
+ActivationFunctionTanh(v) => (1 - exp(-2 * v))/( 1 + exp(-2 * v))
+
+
+// DEEP LEARNING 
+
+// INPUTS : 
+
+input_1 = tangentdiff(volume)
+input_2 = tangentdiff(e_r)
+input_3 = tangentdiff(upband)
+input_4 = tangentdiff(dnband)
+input_5 = tangentdiff(val)
+
+
+// LAYERS : 
+
+// Input Layers 
+
+n_0 = ActivationFunctionTanh(input_1 + 0)   
+n_1 = ActivationFunctionTanh(input_2 + 0) 
+n_2 = ActivationFunctionTanh(input_3 + 0) 
+n_3 = ActivationFunctionTanh(input_4 + 0) 
+n_4 = ActivationFunctionTanh(input_5 + 0) 
+
+
+// Hidden Layers 
+
+n_5  = ActivationFunctionTanh( -35.733   * n_0 + -86.718  * n_1 + -16.948 * n_2 +  -12.384  * n_3 + -38.803  * n_4 +  43.379) 
+n_6  = ActivationFunctionTanh(  -2.394   * n_0 + -85.060  * n_1 +  -6.174 * n_2 +  -45.667  * n_3 +  26.925  * n_4 +  16.028) 
+n_7  = ActivationFunctionTanh( -63.221   * n_0 +  -7.447  * n_1 +  34.106 * n_2 +  -28.880  * n_3 + -23.098  * n_4 +   9.914) 
+n_8  = ActivationFunctionTanh( -59.117   * n_0 +  41.706  * n_1 +  19.044 * n_2 +  -13.141  * n_3 +  40.028  * n_4 + -50.017) 
+n_9  = ActivationFunctionTanh( -9.193    * n_0 +  -64.825 * n_1 +  12.735 * n_2 +  11.168   * n_3 +  13.162  * n_4 +  -6.669) 
+
+
+// Output Layer 
+
+_output  = ActivationFunctionTanh(4.118 * n_5 + 36.306 * n_6 + -22.908 * n_7 + 11.143 * n_8 + -32.203 * n_9  + -0.263)
+
+_chg_src = tangentdiff(src) * 100
+
+_seed = (_output - _chg_src)
+
+
+// MACD : SEED 
+
+
+fastLength   = 12
+slowlength   = 26
+signalLength = 9
+
+
+macd   = f_ema(_seed, fastLength) - f_ema(_seed, slowlength)
+signal = f_ema(macd, signalLength)
+	   
+
+hist = macd - signal
+
+// Conditions : 
+
+_positive_condition = hist < 0 
+_negative_condition = hist > 0
+
+
+// Plotage 
+
+col_grow_above =  #EF5350
+col_grow_below =  #B2DFDB
+col_fall_above =  #FFCDD2
+col_fall_below =  #26A69A
+col_macd = #0094ff
+col_signal = #ff6a00
+
+
+//Plot data
+
+plot(hist  , title="Histogram", style=plot.style_columns, color=(hist>=0 ? (hist[1] < hist ? col_grow_above : col_fall_above) : (hist[1] < hist ? col_grow_below : col_fall_below) ), transp=0 )
+plot(macd  , title="Diff", color=col_macd, transp=0)
+plot(signal, title="Catalyzer", color=col_signal, transp=0)
+hline(0, color= color.green, linewidth=1)
+
+
+// Definition : Barcolor 
+
+
+color_condition() => 
+
+    (_positive_condition) ?  color.green  : (_negative_condition)  ?  color.red : na 
+   
+  
+  
+color barColor = na 
+barColor := color_condition()
+
+barcolor(color = barColor)
