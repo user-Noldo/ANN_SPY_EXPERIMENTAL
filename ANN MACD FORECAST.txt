@@ -23,7 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-study("ANN MACD Future Forecast (SPY 1D) ")
+study("ANN MACD Future Forecast (SPY 1D) ", max_bars_back=21)
 src = close[0]
 
 
